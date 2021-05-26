@@ -1,4 +1,5 @@
 from constants import *
+import math, random
 
 
 class GameState:
@@ -28,7 +29,7 @@ class GameState:
         self.castle_rights = CastleRights(True, True, True, True)
         self.castle_log = [ CastleRights( self.castle_rights.wks, self.castle_rights.wqs, self.castle_rights.bks, self.castle_rights.bqs ) ]
         
-    def make_move(self, move, final=True):
+    def make_move(self, move, final=True, computer=False):
 
         self.board[move.start_row][move.start_col] = "--"
         self.board[move.end_row][move.end_col] = move.piece_moved
@@ -44,25 +45,25 @@ class GameState:
 
         elif move.piece_moved == 'bK':
             self.black_king = (move.end_row, move.end_col)
-        '''
-        if move.castle_move:
-            
-            if move.end_col - move.start_col == 2:
-                self.board[move.end_row][-3] = self.board[move.end_row][-1]
-                self.board[move.end_row][-1] = "--"
-            
-            else:
-                self.board[move.end_row][3] = self.board[move.end_row][0]
-                self.board[move.end_row][0] = "--"
-        '''
-        if final:
 
-            move.print_chess_notation()
+        if move.castle_move:
+
+            if move.end_col - move.start_col == 2:
+                self.board[move.end_row][5], self.board[move.end_row][7] = self.board[move.end_row][7], self.board[move.end_row][5]
+                
+            else:
+                self.board[move.end_row][3], self.board[move.end_row][0] = self.board[move.end_row][0], self.board[move.end_row][3]
+                
+        if move.promotion_move:
 
             if 'wp' in self.board[0]:
                 
                 col = self.board[0].index('wp')
-                promote = input("PIECE PROMOTION: ").upper()
+
+                if final:
+                    promote = input("PIECE PROMOTION: ").upper()
+                else:
+                    promote = "Q"
 
                 if promote in ["N", "B", "R", "Q"]:
                     self.board[0][col] = "w" + promote
@@ -70,10 +71,27 @@ class GameState:
             if 'bp' in self.board[ROWS - 1]:
                 
                 col = self.board[ROWS - 1].index('bp')
-                promote = input("PIECE PROMOTION: ").upper()
+                
+                if final and not computer:
+                    promote = input("PIECE PROMOTION: ").upper()
+                elif not final:
+                    promote = "Q"
+                else:
+                    promote = "Q"
 
                 if promote in ["N", "B", "R", "Q"]:
                     self.board[ROWS - 1][col] = "b" + promote
+
+        if final:
+
+            notation = move.print_chess_notation()
+
+            if self.checkmate('w') or self.checkmate('b'):
+                notation += '#'
+            elif self.in_check():
+                notation += "+"
+
+            print((len(self.move_log) - 1) // 2 + 1, ":", "BLACK :" if self.white_to_move else "WHITE :", notation)
             
     def undo_move(self, final=False):
         
@@ -94,16 +112,14 @@ class GameState:
             
             self.castle_log.pop()
             self.castle_rights = CastleRights( self.castle_log[-1].wks, self.castle_log[-1].wqs, self.castle_log[-1].bks, self.castle_log[-1].bqs )
-            
-            if move.castle_move and move.piece_moved[1] == "K":
-                
+
+            if move.castle_move:
+
                 if move.end_col - move.start_col == 2:
-                    self.board[move.end_row][-1] = self.board[move.end_row][-3]
-                    self.board[move.end_row][-3] = "--"
-                
+                    self.board[move.end_row][7], self.board[move.end_row][5] = self.board[move.end_row][5], self.board[move.end_row][7]
+                    
                 else:
-                    self.board[move.end_row][0] = self.board[move.end_row][3]
-                    self.board[move.end_row][3] = "--"
+                    self.board[move.end_row][0], self.board[move.end_row][3] = self.board[move.end_row][3], self.board[move.end_row][0]
 
     def update_castling_rights(self, move):
         
@@ -117,18 +133,18 @@ class GameState:
 
         elif move.piece_moved == "wR":
 
-            if move.start_row == 0:
+            if move.start_col == 0:
                 self.castle_rights.wqs = False
             
-            elif move.start_row == 7:
+            elif move.start_col == 7:
                 self.castle_rights.wks = False
 
         elif move.piece_moved == "bR":
 
-            if move.start_row == 0:
+            if move.start_col == 0:
                 self.castle_rights.bqs = False
             
-            elif move.start_row == ROWS - 1:
+            elif move.start_col == 7:
                 self.castle_rights.bks = False            
 
     def legal_moves(self):
@@ -172,8 +188,62 @@ class GameState:
 
         self.white_to_move = white_to_move
 
-        if not moves:
+        if not moves and self.in_check():
             return True
+        else:
+            return False
+
+    def stalemate(self, player):
+
+        white_to_move = self.white_to_move
+        
+        if player == "b":
+            self.white_to_move = False
+
+        elif player == "w":
+            self.white_to_move = True
+
+        moves = self.legal_moves()
+
+        self.white_to_move = white_to_move
+        
+        def piece_inventory():
+            
+            white_pieces = []
+            black_pieces = []
+            
+            for r in self.board:
+                for c in r:
+                    
+                    if c != "--":
+
+                        if c[0] == 'w':
+                            white_pieces.append(c[1])
+
+                        else:
+                            black_pieces.append(c[1])
+
+            return white_pieces, black_pieces
+
+        def equal_list(l1, l2):
+
+            if type(l1) != list or type(l2) != list:
+                return False
+
+            return l2.sort() == l2.sort()
+
+        def not_enough_pieces():
+
+            white_pieces, black_pieces = piece_inventory()
+
+            if len(white_pieces) == 0 and len(black_pieces) == 0:
+                return True
+
+            return False       
+
+        if (not moves or not_enough_pieces()) and not self.in_check():
+            return True
+
         else:
             return False
 
@@ -244,9 +314,10 @@ class GameState:
                  
                 if self.board[row - 1][col] == '--':
                     moves.append(Move((row, col), (row - 1, col), self.board, False))
-                     
-                    if self.board[row - 2][col] == '--' and row == 6:
-                        moves.append(Move((row, col), (row - 2, col), self.board, False))
+
+                    if row == 6:
+                        if self.board[row - 2][col] == '--':
+                            moves.append(Move((row, col), (row - 2, col), self.board, False))
 
                 if col - 1 >= 0:
                     if self.board[row - 1][col - 1][0] == 'b':
@@ -260,9 +331,10 @@ class GameState:
                  
                 if self.board[row + 1][col] == '--':
                     moves.append(Move((row, col), (row + 1, col), self.board, False))
-                     
-                    if self.board[row + 2][col] == '--' and row == 1:
-                        moves.append(Move((row, col), (row + 2, col), self.board, False))
+
+                    if row == 1:
+                        if self.board[row + 2][col] == '--':
+                            moves.append(Move((row, col), (row + 2, col), self.board, False))
 
                 if col - 1 >= 0:
                     if self.board[row + 1][col - 1][0] == 'w':
@@ -387,7 +459,121 @@ class GameState:
         for row in self.board: yield row
 
     def get_square(self, square):
-        return self.board[square[0]][square[1]]
+        return self.board[square[0]][square[1]], square[0], square[1]
+
+    def score_board(self):
+
+        score = 0
+
+        def _pieces():
+
+            score = 0
+            piece_to_score = {'p':1, 'N':3, 'B':3, 'R':5, 'Q':9, 'K':0, '-':0}
+
+            for r in self.board:
+                for c in r:
+
+                    score += ((c[0] == 'w') + -1 * (c[0] == 'b')) * piece_to_score[c[1]]
+
+            return score
+
+        def _center_pieces():
+            return 0
+
+        def _promotion_potential():
+            return 0
+
+        def _king_safety():
+            return 0
+
+        score += _pieces()
+        score += _center_pieces()
+        score += _promotion_potential()
+        score += _king_safety()
+
+        return score
+
+    def terminal(self):
+        return self.checkmate('w') or self.checkmate('b') or self.stalemate('w') or self.stalemate('b')
+
+    def get_all_valid_moves(self):
+        white_to_move = self.white_to_move
+        self.white_to_move = False
+        legal_moves = self.legal_moves()
+        self.white_to_move = white_to_move
+        return legal_moves
+
+    def minimax(self, isMax, alpha, beta, depth):
+
+        is_terminal = self.terminal()
+        valid_moves = self.get_all_valid_moves()
+
+        if is_terminal or depth == 0:
+
+            if is_terminal:
+
+                if self.checkmate('w'):
+                    return None, 100000000
+
+                elif self.checkmate('b'):
+                    return None, -100000000
+
+                else:
+                    return None, 0
+
+            else:
+                return None, self.score_board()
+
+        if isMax:
+
+            bestMove = None
+            bestScore = -math.inf
+
+            for move in valid_moves:
+
+                self.make_move(move, False)
+                new_score = self.minimax(False, alpha, beta, depth - 1)[1]
+                self.undo_move()
+
+                if new_score > bestScore:
+                    bestScore = new_score
+                    bestMove = move
+
+                alpha = max(alpha, bestScore)
+
+                if alpha >= beta:
+                    break
+
+            return bestMove, bestScore
+
+        else:
+
+            bestMove = None
+            bestScore = math.inf
+
+            for move in valid_moves:
+
+                self.make_move(move, False)
+                new_score = self.minimax(False, alpha, beta, depth - 1)[1]
+                self.undo_move()
+
+                if new_score < bestScore:
+                    bestScore = new_score
+                    bestMove = move
+
+                beta = min(bestScore, beta)
+
+                if alpha >= beta:
+                    break
+            
+            return bestMove, bestScore
+
+    def find_best_move(self):
+        return self.minimax(False, -math.inf, math.inf, 2)
+        moves = self.get_all_valid_moves()
+
+        if len(moves) > 0: return (random.choice(moves), 10) 
+        else: return None, None
 
 
 class CastleRights:
@@ -405,6 +591,8 @@ class CastleRights:
 class Move:
     
     def __init__(self, start_square, end_square, board, castle):
+
+        self.board = board
         
         self.start_row, self.start_col = tuple(start_square)
         self.end_row, self.end_col = tuple(end_square)
@@ -412,11 +600,20 @@ class Move:
         self.piece_moved = board[self.start_row][self.start_col]
         self.piece_captured = board[self.end_row][self.end_col]
         
-        if self.piece_moved[1] == "K" and abs( self.start_col - self.end_col ) != 1:
+        if self.piece_moved[1] == "K" and abs( self.start_col - self.end_col ) == 2:
             self.castle_move = True
-
         else:
             self.castle_move = castle
+
+        if (self.piece_moved == "wp" and self.end_row == 0) or (self.piece_moved == "bp" and self.end_row == 7):
+            self.promotion_move = True
+        else:
+            self.promotion_move = False
+
+        if (self.piece_moved[1] == "p") and (abs(self.start_col - self.end_col) == 1) and self.piece_captured == "--":
+            self.en_passant = True
+        else:
+            self.en_passant = False
 
         self.id = self.start_row * 1000 + self.start_col * 100 + self.end_row * 10 + self.end_col
 
@@ -432,15 +629,15 @@ class Move:
     def __repr__(self):
         return ("PIECE: {} | START: {} | END: {} | CASTLE_MOVE: {}".format(self.piece_moved, (self.start_row, self.start_col), (self.end_row, self.end_col), self.castle_move))
         
-    def print_chess_notation(self):
+    def print_chess_notation(self, move_number=0):
 
         if self.castle_move:
 
             if self.end_col - self.start_col == 2:
-                print("O-O")
+                return("O-O")
 
             else:
-                print("O-O-O")
+                return("O-O-O")
 
         else:
         
@@ -457,9 +654,9 @@ class Move:
                 notation += 'x'
 
             notation += col_to_letter[self.end_col]
-            notation += str( self.end_row )
+            notation += str( 8 - self.end_row )
 
-            print(notation)
-        
-        
-    
+            if self.promotion_move:
+                notation += "=" + self.board[self.end_row][self.end_col][1]
+
+            return notation

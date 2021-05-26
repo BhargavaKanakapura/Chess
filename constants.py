@@ -1,8 +1,8 @@
 import pygame
 
-SQ_SIZE = 60
+SQ_SIZE = 50
 ROWS = COLS = 8
-WIDTH, HEIGHT = COLS * SQ_SIZE, ROWS * SQ_SIZE
+WIDTH, HEIGHT = COLS * SQ_SIZE, (ROWS + 1) * SQ_SIZE
 FPS = 15
 
 WHITE = pygame.Color('white')
