@@ -1,26 +1,26 @@
-import pygame
+import constants
 
-pygame.font.init()
+class IvalidLogin(Exception):
+    def __init__(self, uop):
+        self.message = "INVALID LOGIN " + uop.upper() + " IVALID"
+        super().__init__(self.message)
 
-class Text:
+class IvalidInput(Exception):
+    def __init__(self, text_field):
+        self.message = "INVALID INPUT FOR " + text_field
+        super().__init__(self.message)
 
-    def __init__(self, text, pos, color, size, display):
-        self.text = text
-        self.pos = pos
-        self.color = color
-        self.size = size
-        self.display = display
+def valid_login(username, password):
 
-    def render_text(self):       
-        font_name = pygame.font.SysFont('freesansbold.ttf', self.size)
-        text_surf = font_name.render(self.text, False, self.color)
-        self.display.blit(text_surf, self.pos)
+    username = hash(username)
 
-    def change_text(self, new_text):
-        self.text = new_text
-        self.render_text()
+    try:
+        if constants.LOGINS[username] == password:return True
+        else: raise InvalidLogin("PASSWORD")
 
-class Button:
+    except KeyError:
+        raise IvalidLogin("USERNAME")
 
-    def __init__(self, text_object, color, pos, on_click):
-        pass
+print(constants.LOGINS)
+
+

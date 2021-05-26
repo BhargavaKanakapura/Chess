@@ -12,6 +12,22 @@ def load_images():
             value = pygame.transform.scale(pygame.image.load('pieces/' + key + '.png'), (SQ_SIZE, SQ_SIZE))
             
             IMAGES[key] = value
+
+def init():
+
+    username = input("USERNAME: ")
+    password = input("PASSWORD: ")
+
+    UI.valid_login(username, password)
+
+    global mode
+    mode = input("PVP or PVC")
+
+    if mode not in ["PVP", "PVC"]:
+        raise UI.InvalidInput
+
+    else:
+        print("HELLO " + username)
             
 def main():
     
@@ -24,7 +40,7 @@ def main():
     
     game_state = chess.GameState()
     valid_moves = game_state.legal_moves()
-    mode = "PVP"
+    global mode
     
     load_images()
     
@@ -146,6 +162,9 @@ def main():
             move_played = False
 
         update_screen()
+
+def exit():
+    print("GOODBYE")
         
         
 def update_board(screen, game_state, square_selected=None, win=None):
@@ -239,7 +258,9 @@ def animate_move(move, screen, board, clock):
 
 
 if __name__ == "__main__":  
+    init()
     main()
+    exit()
     
     
     
