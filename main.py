@@ -1,4 +1,4 @@
-import pygame, chess, UI
+import pygame, chess, UI, random
 from constants import *
 
 IMAGES = {}
@@ -13,6 +13,16 @@ def load_images():
             
             IMAGES[key] = value
 
+def random_string(length):
+
+    chars = list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%")
+    string = ''
+
+    for _ in range(length):
+        string += random.choice(chars)
+
+    return string
+
 def init():
 
     username = input("USERNAME: ")
@@ -21,13 +31,27 @@ def init():
     UI.valid_login(username, password)
 
     global mode
-    mode = input("PVP or PVC")
+    mode = input("PVP or PVC: ")
 
     if mode not in ["PVP", "PVC"]:
         raise UI.InvalidInput
 
     else:
+
         print("HELLO " + username)
+
+        if mode == "PVP":
+           
+            game_code = input("GAME CODE: ")
+            if game_code.upper() == "NEW":
+                game_code = random_string(10)
+                print("GAME CODE: " + game_code + "\nTHIS IS THE GAME CODE")
+
+        else:
+
+            constants.LEVEL = int(input("LEVEL: "))
+            if constants.LEVEL not in range(1, 11):
+                raise UI.InvalidInput
             
 def main():
     
@@ -52,6 +76,8 @@ def main():
     
     square_selected = ()
     player_clicks = []
+
+    can_undo = True
     
     print("GAME BEGINS")
 
@@ -102,13 +128,27 @@ def main():
                         player_clicks = []
                         square_selected = ()
 
-                if y > HEIGHT - SQ_SIZE and x > 2 * WIDTH // 3:
+                if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo:
                     game_state.undo_move(final=True)
                     print("-|" * 10 + "-")
                     move_played = True
                     animate = False
                     if mode == "PVC":
                         pygame.time.wait(1000)
+
+                if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3):
+
+                    resign = input("DO YOU WISH TO RESIGN: ")
+
+                    if resign.upper() == "YES":
+                        
+                        if game_state.white_to_move:
+                            winner = "BLACK"
+
+                        else:
+                            winner = "WHITE"
+
+                        print("BLACK RESIGNED" if winner == "WHITE" else "WHITE RESIGNED")
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 x, y = event.pos
@@ -120,13 +160,35 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                     
-                if event.key == pygame.K_z:
+                if event.key == pygame.K_z and can_undo:
                     game_state.undo_move(final=True)
                     print("-|" * 10 + "-")
                     move_played = True
                     animate = False
                     if mode == "PVC":
                         pygame.time.wait(1000)
+
+                if event.key == pygame.K_r:
+                    
+                    resign = input("DO YOU WISH TO RESIGN: ")
+
+                    if resign.upper() == "YES":
+                        
+                        if game_state.white_to_move:
+                            winner = "BLACK"
+
+                        else:
+                            winner = "WHITE"
+
+                        print("BLACK RESIGNED" if winner == "WHITE" else "WHITE RESIGNED")
+
+                x, y = pygame.mouse.get_pos()
+
+                if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo:
+                    draw_buttons(screen, c1=pygame.Color('grey'))
+
+                if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3):
+                    draw_buttons(screen, c2=pygame.Color('grey'))
 
         if not game_state.white_to_move and mode == "PVC":
 
@@ -165,7 +227,18 @@ def main():
 
 def exit():
     print("GOODBYE")
-        
+
+def draw_buttons(screen, c1=BLACK, c2=BLACK):
+
+    font = pygame.font.SysFont("freesansbold.ttf", SQ_SIZE // 2 - SQ_SIZE//10)
+
+    pygame.draw.rect(screen, c1, ( 2 * WIDTH // 3, HEIGHT - SQ_SIZE, WIDTH // 3, SQ_SIZE // 2 ))
+    text_img = font.render("UNDO", False, WHITE)
+    screen.blit(text_img, (2 * WIDTH // 3 + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE + SQ_SIZE // 5))
+
+    pygame.draw.rect(screen, c2, ( 2 * WIDTH // 3, HEIGHT - SQ_SIZE // 2, WIDTH // 3, SQ_SIZE // 2 ))
+    text_img = font.render("RESIGN", False, WHITE)
+    screen.blit(text_img, (2 * WIDTH // 3 + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE // 2 + SQ_SIZE // 5)) 
         
 def update_board(screen, game_state, square_selected=None, win=None):
 
@@ -180,13 +253,10 @@ def update_board(screen, game_state, square_selected=None, win=None):
         text = win + " WINS"
 
     font = pygame.font.SysFont("freesansbold.ttf", SQ_SIZE - SQ_SIZE//10)
-
     text_img = font.render(text, False, BLACK)
     screen.blit(text_img, (SQ_SIZE//5, HEIGHT - SQ_SIZE + SQ_SIZE//5))
 
-    pygame.draw.rect(screen, BLACK, ( 2 * WIDTH // 3, HEIGHT - SQ_SIZE, WIDTH // 3, SQ_SIZE ))
-    text_img = font.render("UNDO", False, WHITE)
-    screen.blit(text_img, (2 * WIDTH // 3 + SQ_SIZE // 2.3, HEIGHT - SQ_SIZE + SQ_SIZE // 5))
+    draw_buttons(screen)
     
 def draw_board(screen, square_selected = None):
     

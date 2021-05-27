@@ -2,7 +2,7 @@ import constants
 
 class IvalidLogin(Exception):
     def __init__(self, uop):
-        self.message = "INVALID LOGIN " + uop.upper() + " IVALID"
+        self.message = "INVALID LOGIN --> " + uop.upper() + " IVALID"
         super().__init__(self.message)
 
 class IvalidInput(Exception):
@@ -15,12 +15,8 @@ def valid_login(username, password):
     username = hash(username)
 
     try:
-        if constants.LOGINS[username] == password:return True
-        else: raise InvalidLogin("PASSWORD")
+        if constants.LOGINS[username] == password: return True
+        else: raise IvalidLogin("PASSWORD")
 
     except KeyError:
         raise IvalidLogin("USERNAME")
-
-print(constants.LOGINS)
-
-

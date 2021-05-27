@@ -74,8 +74,6 @@ class GameState:
                 
                 if final and not computer:
                     promote = input("PIECE PROMOTION: ").upper()
-                elif not final:
-                    promote = "Q"
                 else:
                     promote = "Q"
 
