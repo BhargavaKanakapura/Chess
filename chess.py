@@ -22,6 +22,7 @@ class GameState:
         self.move_log = []
         
         self.pieces = self.Pieces(self)
+        self.ai = self.Computer(self)
 
         self.white_king = (7, 4)
         self.black_king = (0, 4)
@@ -459,119 +460,45 @@ class GameState:
     def get_square(self, square):
         return self.board[square[0]][square[1]], square[0], square[1]
 
-    def score_board(self):
+    class Computer:
 
-        score = 0
+        def __init__(self, outer):
+            self.outer = outer
 
-        def _pieces():
+        def get_all_moves(self):
+            white_to_move = self.outer.white_to_move
+            self.outer.white_to_move = False
+            moves = self.outer.legal_moves()
+            self.outer.white_to_move = white_to_move
+            return moves
 
+        def score_board(self):
+
+            piece_to_points = {'Q':9, 'R':5, 'B':3, 'N':3, 'p':1, 'K':0, '-':0}
             score = 0
-            piece_to_score = {'p':1, 'N':3, 'B':3, 'R':5, 'Q':9, 'K':0, '-':0}
 
-            for r in self.board:
-                for c in r:
-
-                    score += ((c[0] == 'w') + -1 * (c[0] == 'b')) * piece_to_score[c[1]]
+            for row in self.outer.board:
+                for square in row:
+                    score += piece_to_points[square[1]] * (-1 if square[0] == 'w' else 1)
 
             return score
 
-        def _center_pieces():
-            return 0
+        def center_square_control(self):
 
-        def _promotion_potential():
-            return 0
+            center_squares = ((4, 3), (3, 4), (3, 3), (4, 4))
 
-        def _king_safety():
-            return 0
+            for square in center_squares:
+                
+                white_to_move = self.outer.white_to_move
 
-        score += _pieces()
-        score += _center_pieces()
-        score += _promotion_potential()
-        score += _king_safety()
-
-        return score
-
-    def terminal(self):
-        return self.checkmate('w') or self.checkmate('b') or self.stalemate('w') or self.stalemate('b')
-
-    def get_all_valid_moves(self):
-        white_to_move = self.white_to_move
-        self.white_to_move = False
-        legal_moves = self.legal_moves()
-        self.white_to_move = white_to_move
-        return legal_moves
-
-    def minimax(self, isMax, alpha, beta, depth):
-
-        is_terminal = self.terminal()
-        valid_moves = self.get_all_valid_moves()
-
-        if is_terminal or depth == 0:
-
-            if is_terminal:
-
-                if self.checkmate('w'):
-                    return None, 100000000
-
-                elif self.checkmate('b'):
-                    return None, -100000000
-
-                else:
-                    return None, 0
-
-            else:
-                return None, self.score_board()
-
-        if isMax:
-
-            bestMove = None
-            bestScore = -math.inf
-
-            for move in valid_moves:
-
-                self.make_move(move, False)
-                new_score = self.minimax(False, alpha, beta, depth - 1)[1]
-                self.undo_move()
-
-                if new_score > bestScore:
-                    bestScore = new_score
-                    bestMove = move
-
-                alpha = max(alpha, bestScore)
-
-                if alpha >= beta:
-                    break
-
-            return bestMove, bestScore
-
-        else:
-
-            bestMove = None
-            bestScore = math.inf
-
-            for move in valid_moves:
-
-                self.make_move(move, False)
-                new_score = self.minimax(False, alpha, beta, depth - 1)[1]
-                self.undo_move()
-
-                if new_score < bestScore:
-                    bestScore = new_score
-                    bestMove = move
-
-                beta = min(bestScore, beta)
-
-                if alpha >= beta:
-                    break
-            
-            return bestMove, bestScore
+        def end_game(self):
+            return self.outer.checkmate('w') or self.outer.checkmate('b') or self.outer.stalemate('w') or self.outer.stalemate('b')
 
     def find_best_move(self):
-        return self.minimax(False, -math.inf, math.inf, 2)
-        moves = self.get_all_valid_moves()
-
-        if len(moves) > 0: return (random.choice(moves), 10) 
-        else: return None, None
+        
+        moves = self.ai.get_all_moves()
+        if moves:
+            return self.ai.best_move()
 
 
 class CastleRights:
