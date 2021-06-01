@@ -1,5 +1,7 @@
 from constants import *
-import math, random
+import math
+import random
+import training 
 
 
 class GameState:
@@ -20,9 +22,12 @@ class GameState:
         self.white_to_move = True
         
         self.move_log = []
+        self.user_move_log = []
         
         self.pieces = self.Pieces(self)
+
         self.ai = self.Computer(self)
+        training.init(self)
 
         self.white_king = (7, 4)
         self.black_king = (0, 4)
@@ -63,6 +68,7 @@ class GameState:
 
                 if final:
                     promote = input("PIECE PROMOTION: ").upper()
+                    print("\033[A{}\033[A")
                 else:
                     promote = "Q"
 
@@ -75,6 +81,7 @@ class GameState:
                 
                 if final and not computer:
                     promote = input("PIECE PROMOTION: ").upper()
+                    print("\033[A{}\033[A")
                 else:
                     promote = "Q"
 
@@ -91,12 +98,14 @@ class GameState:
                 notation += "+"
 
             print((len(self.move_log) - 1) // 2 + 1, ":", "BLACK :" if self.white_to_move else "WHITE :", notation)
+            self.user_move_log.append(notation)
             
     def undo_move(self, final=False):
         
         if len(self.move_log) != 0:
             
             move = self.move_log.pop()
+            if final: self.user_move_log.pop()
             
             self.board[move.start_row][move.start_col] = move.piece_moved
             self.board[move.end_row][move.end_col] = move.piece_captured
@@ -224,12 +233,10 @@ class GameState:
 
             return white_pieces, black_pieces
 
-        def equal_list(l1, l2):
+        def repetition():
 
-            if type(l1) != list or type(l2) != list:
-                return False
-
-            return l2.sort() == l2.sort()
+            if len(self.move_log) > 8:
+                pass
 
         def not_enough_pieces():
 
@@ -464,6 +471,7 @@ class GameState:
 
         def __init__(self, outer):
             self.outer = outer
+            self.best_move = None, None
 
         def get_all_moves(self):
             white_to_move = self.outer.white_to_move
@@ -481,24 +489,115 @@ class GameState:
                 for square in row:
                     score += piece_to_points[square[1]] * (-1 if square[0] == 'w' else 1)
 
-            return score
+            return score * 1.5
 
         def center_square_control(self):
 
             center_squares = ((4, 3), (3, 4), (3, 3), (4, 4))
+            score = 0
 
             for square in center_squares:
                 
                 white_to_move = self.outer.white_to_move
 
+                self.outer.white_to_move = True
+                if self.outer.controlled_squares(square):
+                    score += 2
+
+                self.outer.white_to_move = False
+                if self.outer.controlled_squares(square):
+                    score += 2
+
+                self.outer.white_to_move = white_to_move
+
+            if len(self.outer.move_log) < 10:
+                factor = 1.5
+
+            elif len(self.outer.move_log) < 20:
+                factor = 1.2
+            
+            return score * 1.3
+
         def end_game(self):
             return self.outer.checkmate('w') or self.outer.checkmate('b') or self.outer.stalemate('w') or self.outer.stalemate('b')
 
+        def minimax(self, alpha, beta, depth, is_max):
+
+            game_over = self.end_game()
+            valid_moves = self.get_all_moves()
+
+            if game_over or depth == 0:
+
+                if game_over:
+
+                    if self.outer.checkmate('w'):
+                        return None, -1000000000
+
+                    elif self.outer.checkmate('b'):
+                        return None, 1000000000
+
+                    else:
+                        return None, 0
+
+                if depth == 0:
+                    return None, self.score_board()
+
+            if is_max:
+
+                best_move = random.choice(valid_moves)
+                best_score = -math.inf
+
+                for move in valid_moves:
+
+                    self.outer.make_move(move, final=False, computer=True)
+                    new_score = self.minimax(alpha, beta, depth - 1, False)[1]
+                    self.outer.undo_move()
+
+                    if new_score > best_score:
+                        best_score = new_score
+                        best_move = move
+
+                    alpha = max(alpha, best_score)
+
+                    if alpha >= beta:
+                        break
+
+                return best_move, best_score
+
+            else:
+
+                best_move = random.choice(valid_moves)
+                best_score = math.inf
+
+                for move in valid_moves:
+
+                    self.outer.make_move(move, final=False, computer=True)
+                    new_score = self.minimax(alpha, beta, depth - 1, True)[1]
+                    self.outer.undo_move()
+
+                    if new_score < best_score:
+                        best_score = new_score
+                        best_move = move
+
+                    beta = min(beta, best_score)
+
+                    if alpha >= beta:
+                        break
+
+                return best_move, best_score
+
+        def get_best_move(self):
+            best_move = self.minimax(-math.inf, math.inf, 3, True)
+            return best_move
+            
     def find_best_move(self):
         
         moves = self.ai.get_all_moves()
         if moves:
-            return self.ai.best_move()
+            self.ai.best_move = self.ai.get_best_move()
+            #return random.choice(moves), 0
+        else:
+            self.ai.best_move = None, None
 
 
 class CastleRights:

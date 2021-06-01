@@ -1,4 +1,10 @@
-import pygame, chess, UI, random, os
+import pygame
+import chess
+import UI
+import multiprocessing as mp
+import random
+import sys
+import os
 from constants import *
 
 IMAGES = {}
@@ -15,6 +21,11 @@ def load_images():
             value = pygame.transform.scale(pygame.image.load('pieces/' + key + '.png'), (SQ_SIZE, SQ_SIZE))
             
             IMAGES[key] = value
+
+def run(function, args=()):
+    pool = mp.Pool(mp.cpu_count())
+    pool.apply(function, args=())
+    pool.close()
 
 def random_string(length):
 
@@ -36,10 +47,10 @@ def init():
     os.system('clear')
 
     global mode
-    mode = input("PVP or PVC: ")
+    mode = input("PVP or PVC: ").upper()
 
     if mode not in ["PVP", "PVC"]:
-        raise UI.InvalidInput
+        raise UI.InvalidInput("MODE PVP/PVC --> ENTERED: " + mode)
 
     else:
 
@@ -56,21 +67,22 @@ def init():
                     cont = input("PRESS ENTER TO CONTINUE")
 
         else:
-
-            constants.LEVEL = int(input("LEVEL: "))
-            if constants.LEVEL not in range(1, 11):
+            
+            LEVEL = int(input("LEVEL: "))
+            if LEVEL not in range(1, 11):
                 raise UI.InvalidInput
             
 def main():
     
     pygame.init()
     
-    display = pygame.display.set_mode(( WIDTH, HEIGHT ))
+    display = pygame.display.set_mode(( ACT_WIDTH, HEIGHT ))
     clock = pygame.time.Clock()
     
-    display.fill(WHITE)
+    display.fill((30, 30, 30))
     
     game_state = chess.GameState()
+    move_log = UI.MoveLog(display)
     valid_moves = game_state.legal_moves()
     global mode
     
@@ -85,8 +97,8 @@ def main():
     square_selected = ()
     player_clicks = []
 
-    can_undo = True
-    
+    can_undo = 1
+
     os.system('clear')
     print("GAME BEGINS")
     for _ in range(2): print("-" * 20)
@@ -138,15 +150,18 @@ def main():
                         player_clicks = []
                         square_selected = ()
 
-                if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo and winner == None:
+                if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo and winner == None and game_state.move_log:
                     game_state.undo_move(final=True)
                     print("\033[A{}\033[A")
                     move_played = True
                     animate = False
-                    if mode == "PVC":
-                        pygame.time.wait(1000)
+                    if mode == "PVC" or (game_state.white_to_move and len(game_state.move_log) >= 2):
+                        game_state.undo_move(final=True)
+                        print("\033[A{}\033[A")
+                        move_played = True
+                        animate = False
 
-                if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3) and winner == None:
+                if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3) and (mode == "PVP" or (mode == "PVC" and game_state.white_to_move)) and winner == None:
 
                     resign = "yes"
 
@@ -176,7 +191,10 @@ def main():
                     move_played = True
                     animate = False
                     if mode == "PVC":
-                        pygame.time.wait(1000)
+                        game_state.undo_move(final=True)
+                        print("\033[A{}\033[A")
+                        move_played = True
+                        animate = False
 
                 if event.key == pygame.K_r:
                     
@@ -201,17 +219,6 @@ def main():
             else:
                 draw_buttons(display) if can_undo else draw_buttons(display, c1=pygame.Color('dark grey'))
 
-        if not game_state.white_to_move and mode == "PVC":
-
-            move, score = game_state.find_best_move()
-
-            if move in valid_moves:
-                game_state.make_move(move)
-                move_played = True
-                    
-            player_clicks = []
-            square_selected = ()
- 
         if move_played:
             
             if animate:
@@ -223,7 +230,7 @@ def main():
             elif game_state.checkmate('b'):
                 winner = "WHITE"
 
-            elif game_state.stalemate('w') or game_state.stalemate('b'):
+            elif (game_state.stalemate('w') and game_state.white_to_move) or (game_state.stalemate('b') and not game_state.white_to_move):
                 winner = "NOBODY"
 
             else: winner = None
@@ -233,9 +240,37 @@ def main():
 
         update_screen()
 
+        if winner != None:
+
+            download_game_log = True if input("DOWNLOAD GAME LOG: ").upper() == "YES" else False
+
+            if download_game_log:
+
+                file = input("ENTER THE FILE TO WHICH THE GAME LOG IS TO BE SAVED: ")
+
+                with open(file, mode='a'):
+                    file = game_state.user_move_log
+
+            os.system('clear')
+            print(file)
+            exit()
+
+        if not game_state.white_to_move and mode == "PVC":
+
+            game_state.find_best_move()
+            move, score = game_state.ai.best_move
+
+            game_state.make_move(move)
+            move_played = True
+                    
+            player_clicks = []
+            square_selected = ()
+            
 def exit():
     print("GOODBYE")
-
+    pygame.quit()
+    quit()
+    
 
 def draw_buttons(screen, c1=BLACK, c2=BLACK):
 
@@ -331,14 +366,12 @@ def animate_move(move, screen, board, clock):
 
         screen.blit(IMAGES[move.piece_moved], (pygame.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE)))
         pygame.display.flip()
-        clock.tick(100)        
+        clock.tick(100)      
 
 
-if __name__ == "__main__":  
-    init()
-    main()
-    exit()
-    
+
+init()
+main()
     
     
     
