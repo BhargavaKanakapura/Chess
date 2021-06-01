@@ -15,14 +15,3 @@ LOGINS = {hash("Bhargava"):"Chess", hash("Guest"):"Guest"}
 LEVEL = -1
 
 STDOUT = []
-
-def PRINT(value):
-
-    if type(value) in [str, int]:
-        STDOUT.append(value)
-        print(value)
-
-    elif type(value) in [list, set]:
-        STDOUT.append(value)
-        for item in value:
-            print(item)

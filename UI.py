@@ -27,20 +27,20 @@ class MoveLog:
 
     def __init__(self, surf):
 
-        self.line = 0
-        self.scroll = False
+        self.line = 1
+        self.new_page = False
 
         self.c_x, self.c_y = WIDTH + SQ_SIZE // 10, 10
-        self.txt_size = 10
+        self.txt_size = 13
 
-        self.padding = 2
+        self.padding = 4
 
         self.surf = surf
 
     def write_line(self, line, next_line=True):
         
         font = pygame.font.Font('freesansbold.ttf', self.txt_size)
-        text_img = font.render(line, False, WHITE)
+        text_img = font.render(str(self.line) + ". " + line, False, WHITE)
 
         if next_line:
             self.break_line()

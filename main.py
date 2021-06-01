@@ -1,9 +1,7 @@
 import pygame
 import chess
 import UI
-import multiprocessing as mp
 import random
-import sys
 import os
 from constants import *
 
@@ -22,11 +20,6 @@ def load_images():
             
             IMAGES[key] = value
 
-def run(function, args=()):
-    pool = mp.Pool(mp.cpu_count())
-    pool.apply(function, args=())
-    pool.close()
-
 def random_string(length):
 
     chars = list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%")
@@ -38,6 +31,8 @@ def random_string(length):
     return string
 
 def init():
+
+    print(pygame.font.get_fonts())
 
     username = input("USERNAME: ")
     password = input("PASSWORD: ")
@@ -236,6 +231,8 @@ def main():
             else: winner = None
 
             valid_moves = game_state.legal_moves()
+            text = move_log.write_line(game_state.user_move_log[-1])
+            display.blit(text[0], text[1])
             move_played = False
 
         update_screen()
