@@ -36,24 +36,29 @@ class MoveLog:
         self.padding = 4
 
         self.surf = surf
+        self.line_log = []
 
-    def write_line(self, line, next_line=True):
+    def write_line(self, line, next_line=True, color=WHITE):
         
         font = pygame.font.Font('freesansbold.ttf', self.txt_size)
-        text_img = font.render(str(self.line) + ". " + line, False, WHITE)
+        text_img = font.render(str(self.line) + ". " + line, False, color)
 
         if next_line:
             self.break_line()
 
+        self.line_log.append(line)
         return text_img, (self.c_x, self.c_y)
+
+    def erase_line(self):
+    
+        self.c_y -= self.txt_size + self.padding
+        self.line -= 1
+        self.line_log.pop()
 
     def break_line(self):
         
         self.line += 1
         self.c_y += self.txt_size + self.padding
-
-        if self.line == 10:
-            self.scroll()
 
     def scroll(self):
 

@@ -32,10 +32,8 @@ def random_string(length):
 
 def init():
 
-    print(pygame.font.get_fonts())
-
-    username = input("USERNAME: ")
-    password = input("PASSWORD: ")
+    username = "Bhargava"
+    password = "Chess"
 
     UI.valid_login(username, password)
     
@@ -87,12 +85,13 @@ def main():
     winner = None
 
     move_played = False
+    undo_made = (False, False)
     animate = False
     
     square_selected = ()
     player_clicks = []
 
-    can_undo = 1
+    can_undo = True
 
     os.system('clear')
     print("GAME BEGINS")
@@ -105,6 +104,16 @@ def main():
             valid_moves_for_piece(display, valid_moves, player_clicks[0])
         else: 
             update_board(display, game_state, win=winner)
+
+        if undo_made[0]:
+            x, y = move_log.c_x, move_log.c_y
+            w, h = SQ_SIZE * 2, move_log.txt_size + move_log.padding
+            pygame.draw.rect(display, (30, 30, 30), (x, y + h, w, h))
+
+        if undo_made[0] and undo_made[1]:
+            x, y = move_log.c_x, move_log.c_y
+            w, h = SQ_SIZE * 2, move_log.txt_size
+            pygame.draw.rect(display, (30, 30, 30), (x, y, w, h * 2))
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -140,20 +149,34 @@ def main():
                         if move in valid_moves:
                             game_state.make_move(move)
                             move_played = True
+                            undo_made = (False, False)
                             animate = True
 
                         player_clicks = []
                         square_selected = ()
 
                 if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo and winner == None and game_state.move_log:
+                    
+                    move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(30, 30, 30))
                     game_state.undo_move(final=True)
+                    move_log.erase_line()
+
                     print("\033[A{}\033[A")
+
                     move_played = True
+                    undo_made = (True, False)
                     animate = False
+
                     if mode == "PVC" or (game_state.white_to_move and len(game_state.move_log) >= 2):
+
+                        move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(30, 30, 30))
                         game_state.undo_move(final=True)
+                        move_log.erase_line()
+
                         print("\033[A{}\033[A")
+                        
                         move_played = True
+                        undo_made = (True, True)
                         animate = False
 
                 if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3) and (mode == "PVP" or (mode == "PVC" and game_state.white_to_move)) and winner == None:
@@ -179,29 +202,6 @@ def main():
                 
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                    
-                if event.key == pygame.K_z and can_undo and winner == None:
-                    game_state.undo_move(final=True)
-                    print("\033[A{}\033[A")
-                    move_played = True
-                    animate = False
-                    if mode == "PVC":
-                        game_state.undo_move(final=True)
-                        print("\033[A{}\033[A")
-                        move_played = True
-                        animate = False
-
-                if event.key == pygame.K_r:
-                    
-                    resign = input("DO YOU WISH TO RESIGN: ")
-
-                    if resign.upper() == "YES":
-                        
-                        if game_state.white_to_move:
-                            winner = "BLACK"
-
-                        else:
-                            winner = "WHITE"
 
             x, y = pygame.mouse.get_pos()
 
@@ -231,8 +231,9 @@ def main():
             else: winner = None
 
             valid_moves = game_state.legal_moves()
-            text = move_log.write_line(game_state.user_move_log[-1])
-            display.blit(text[0], text[1])
+            if game_state.user_move_log and (not undo_made[1] and not undo_made[0]):
+                text = move_log.write_line(game_state.user_move_log[-1])
+                display.blit(text[0], text[1])
             move_played = False
 
         update_screen()
