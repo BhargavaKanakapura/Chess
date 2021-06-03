@@ -27,7 +27,6 @@ class GameState:
         self.pieces = self.Pieces(self)
 
         self.ai = self.Computer(self)
-        training.init(self)
 
         self.white_king = (7, 4)
         self.black_king = (0, 4)
@@ -480,44 +479,6 @@ class GameState:
             self.outer.white_to_move = white_to_move
             return moves
 
-        def score_board(self):
-
-            piece_to_points = {'Q':9, 'R':5, 'B':3, 'N':3, 'p':1, 'K':0, '-':0}
-            score = 0
-
-            for row in self.outer.board:
-                for square in row:
-                    score += piece_to_points[square[1]] * (-1 if square[0] == 'w' else 1)
-
-            return score * 1.5
-
-        def center_square_control(self):
-
-            center_squares = ((4, 3), (3, 4), (3, 3), (4, 4))
-            score = 0
-
-            for square in center_squares:
-                
-                white_to_move = self.outer.white_to_move
-
-                self.outer.white_to_move = True
-                if self.outer.controlled_squares(square):
-                    score += 2
-
-                self.outer.white_to_move = False
-                if self.outer.controlled_squares(square):
-                    score += 2
-
-                self.outer.white_to_move = white_to_move
-
-            if len(self.outer.move_log) < 10:
-                factor = 1.5
-
-            elif len(self.outer.move_log) < 20:
-                factor = 1.2
-            
-            return score * 1.3
-
         def end_game(self):
             return self.outer.checkmate('w') or self.outer.checkmate('b') or self.outer.stalemate('w') or self.outer.stalemate('b')
 
@@ -540,7 +501,7 @@ class GameState:
                         return None, 0
 
                 if depth == 0:
-                    return None, training.score_board()
+                    return None, training.score_board(self.board)
 
             if is_max:
 
