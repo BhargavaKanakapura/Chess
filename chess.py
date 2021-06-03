@@ -512,13 +512,10 @@ class GameState:
             if game_over or depth == 0:
 
                 if game_over:
-
                     if self.outer.checkmate('w'):
                         return None, -1000000000
-
                     elif self.outer.checkmate('b'):
                         return None, 1000000000
-
                     else:
                         return None, 0
 
