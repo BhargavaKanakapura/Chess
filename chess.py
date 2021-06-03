@@ -223,10 +223,8 @@ class GameState:
                 for c in r:
                     
                     if c != "--":
-
                         if c[0] == 'w':
                             white_pieces.append(c[1])
-
                         else:
                             black_pieces.append(c[1])
 
@@ -235,18 +233,42 @@ class GameState:
         def repetition():
 
             if len(self.move_log) > 8:
-                pass
+                m1 = self.move_log[-1]
+                m2 = self.move_log[-2]
+                m3 = self.move_log[-3]
+                m4 = self.move_log[-4]
+                m5 = self.move_log[-5]
+                m6 = self.move_log[-6]
+                m7 = self.move_log[-7]
+                m8 = self.move_log[-8]
+                if m1 == m3 and m2 == m4 and m3 == m5 and m4 == m6 and m5 == m7 and m6 == m8:
+                    return True
+                
+        def equal_lists(l1, l2):
+            if (type(l1), type(l2)) != (list, list):
+                return False
+            return l1.sort() == l2.sort()
 
         def not_enough_pieces():
 
             white_pieces, black_pieces = piece_inventory()
 
-            if len(white_pieces) == 0 and len(black_pieces) == 0:
+            if len(white_pieces) == 1 and len(black_pieces) == 1:
+                return True
+            
+            if equal_lists(white_pieces, ["K", "B"]) and equal_lists(black_pieces, ["K"]):
+                return True
+            if equal_lists(black_pieces, ["K", "B"]) and equal_lists(white_pieces, ["K"]):
+                return True
+            
+            if equal_lists(white_pieces, ["K", "N"]) and (equal_lists(black_pieces, ["K"]) or equal_lists(black_pieces, ["K", "N"]) or equal_lists(black_pieces, ["K", "B"])):
+                return True
+            if equal_lists(black_pieces, ["K", "N"]) and (equal_lists(white_pieces, ["K"]) or equal_lists(white_pieces, ["K", "N"]) or equal_lists(white_pieces, ["K", "B"])):
                 return True
 
             return False       
 
-        if (not moves or not_enough_pieces()) and not self.in_check():
+        if (not moves or not_enough_pieces() or repetition()) and not self.in_check():
             return True
 
         else:
@@ -556,7 +578,6 @@ class GameState:
         moves = self.ai.get_all_moves()
         if moves:
             self.ai.best_move = self.ai.get_best_move()
-            #return random.choice(moves), 0
         else:
             self.ai.best_move = None, None
 
