@@ -540,7 +540,7 @@ class GameState:
                         return None, 0
 
                 if depth == 0:
-                    return None, self.score_board()
+                    return None, training.score_board()
 
             if is_max:
 

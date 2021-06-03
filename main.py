@@ -32,8 +32,8 @@ def random_string(length):
 
 def init():
 
-    username = "Bhargava"
-    password = "Chess"
+    username = input("USERNAME: ")
+    password = input("PADDWORD: ")
 
     UI.valid_login(username, password)
     
@@ -72,7 +72,7 @@ def main():
     display = pygame.display.set_mode(( ACT_WIDTH, HEIGHT ))
     clock = pygame.time.Clock()
     
-    display.fill((30, 30, 30))
+    display.fill((20, 20, 20))
     
     game_state = chess.GameState()
     move_log = UI.MoveLog(display)
@@ -99,6 +99,9 @@ def main():
 
     def update_screen():
 
+        if move_log.line == 1 and move_log.breaks >= 1:
+            display.fill((20, 20, 20))
+
         if len(player_clicks) > 0: 
             update_board(display, game_state, square_selected=player_clicks[0], win=winner)
             valid_moves_for_piece(display, valid_moves, player_clicks[0])
@@ -112,8 +115,8 @@ def main():
 
         if undo_made[0] and undo_made[1]:
             x, y = move_log.c_x, move_log.c_y
-            w, h = SQ_SIZE * 2, move_log.txt_size
-            pygame.draw.rect(display, (30, 30, 30), (x, y, w, h * 2))
+            w, h = SQ_SIZE * 2, move_log.txt_size + move_log.padding
+            pygame.draw.rect(display, (30, 30, 30), (x, y + h, w, h * 2))
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -192,11 +195,6 @@ def main():
                             winner = "WHITE"
 
                         print("BLACK RESIGNED" if winner == "WHITE" else "WHITE RESIGNED")
-
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                x, y = event.pos
-                row, col = row, col = y // SQ_SIZE, x // SQ_SIZE
-                print(game_state.get_square((row, col)))
                     
             if event.type == pygame.KEYDOWN:
                 
@@ -234,6 +232,8 @@ def main():
             if game_state.user_move_log and (not undo_made[1] and not undo_made[0]):
                 text = move_log.write_line(game_state.user_move_log[-1])
                 display.blit(text[0], text[1])
+                if move_log.line == 24:
+                    move_log.scroll()
             move_played = False
 
         update_screen()
