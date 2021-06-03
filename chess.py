@@ -25,6 +25,7 @@ class GameState:
         self.user_move_log = []
         
         self.pieces = self.Pieces(self)
+        training.__init__(self)
 
         self.ai = self.Computer(self)
 
