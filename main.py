@@ -366,10 +366,9 @@ def animate_move(move, screen, board, clock):
         pygame.display.flip()
         clock.tick(100)      
 
-
-
-init()
-main()
+if __name__ == "__main__":
+    init()
+    main()
     
     
     

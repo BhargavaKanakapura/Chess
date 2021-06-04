@@ -155,9 +155,10 @@ class GameState:
             elif move.start_col == 7:
                 self.castle_rights.bks = False            
 
-    def legal_moves(self):
+    def legal_moves(self, get_blind_moves=False):
 
         moves = self.blind_legal_moves()
+        blind_moves = moves
         
         temp_castleing_rights = CastleRights( self.castle_rights.wks, self.castle_rights.wqs, self.castle_rights.bks, self.castle_rights.bqs )
         
@@ -172,7 +173,7 @@ class GameState:
             self.make_move(moves[i], final=False)
             self.white_to_move = not self.white_to_move
             
-            if self.in_check():
+            if self.in_check(blind_moves):
                 moves.remove(moves[i])
 
             self.white_to_move = not self.white_to_move
@@ -180,23 +181,27 @@ class GameState:
             
         self.castle_rights = temp_castleing_rights
 
-        return moves
+        if get_blind_moves:
+            return moves, blind_moves
 
-    def checkmate(self, player):
+        else:
+            return moves
+
+    def checkmate(self, player, current_moves=None):
 
         white_to_move = self.white_to_move
         
         if player == "b":
             self.white_to_move = False
-
         elif player == "w":
             self.white_to_move = True
 
-        moves = self.legal_moves()
+        if current_moves == None:
+            moves = self.legal_moves()
 
         self.white_to_move = white_to_move
 
-        if not moves and self.in_check():
+        if len(moves) == 0 and self.in_check(moves = moves):
             return True
         else:
             return False
@@ -242,7 +247,7 @@ class GameState:
                 m6 = self.move_log[-6]
                 m7 = self.move_log[-7]
                 m8 = self.move_log[-8]
-                if m1 == m3 and m2 == m4 and m3 == m5 and m4 == m6 and m5 == m7 and m6 == m8:
+                if m1 == m5 and m2 == m7 and m3 == m8 and m4 == m6 and m5 == m7 and m6 == m8:
                     return True
                 
         def equal_lists(l1, l2):
@@ -269,28 +274,27 @@ class GameState:
 
             return False       
 
-        if (not moves or not_enough_pieces() or repetition()) and not self.in_check():
+        if (not moves or repetition()) and not self.in_check():
             return True
-
         else:
             return False
 
-    def in_check(self):
+    def in_check(self, moves=None):
         
         if self.white_to_move:
-            return self.controlled_squares( self.white_king )
+            return self.controlled_squares( self.white_king, current_moves=moves )
 
         else:
-            return self.controlled_squares( self.black_king )
+            return self.controlled_squares( self.black_king, current_moves=moves )
 
-    def controlled_squares(self, pos):
+    def controlled_squares(self, pos, current_moves=None):
         
         r, c = pos
         self.white_to_move = not self.white_to_move
 
-        opponent_moves = self.blind_legal_moves()
+        current_moves = self.blind_legal_moves()
 
-        for move in opponent_moves:
+        for move in current_moves:
             if move.end_row == r and move.end_col == c:
                 self.white_to_move = not self.white_to_move
                 return True
@@ -505,70 +509,9 @@ class GameState:
         def end_game(self):
             return self.outer.checkmate('w') or self.outer.checkmate('b') or self.outer.stalemate('w') or self.outer.stalemate('b')
 
-        def minimax(self, alpha, beta, depth, is_max):
-
-            game_over = self.end_game()
-            valid_moves = self.get_all_moves()
-
-            if game_over or depth == 0:
-
-                if game_over:
-                    if self.outer.checkmate('w'):
-                        return None, -1000000000
-                    elif self.outer.checkmate('b'):
-                        return None, 1000000000
-                    else:
-                        return None, 0
-
-                if depth == 0:
-                    return None, training.score_board(self.board)
-
-            if is_max:
-
-                best_move = random.choice(valid_moves)
-                best_score = -math.inf
-
-                for move in valid_moves:
-
-                    self.outer.make_move(move, final=False, computer=True)
-                    new_score = self.minimax(alpha, beta, depth - 1, False)[1]
-                    self.outer.undo_move()
-
-                    if new_score > best_score:
-                        best_score = new_score
-                        best_move = move
-
-                    alpha = max(alpha, best_score)
-
-                    if alpha >= beta:
-                        break
-
-                return best_move, best_score
-
-            else:
-
-                best_move = random.choice(valid_moves)
-                best_score = math.inf
-
-                for move in valid_moves:
-
-                    self.outer.make_move(move, final=False, computer=True)
-                    new_score = self.minimax(alpha, beta, depth - 1, True)[1]
-                    self.outer.undo_move()
-
-                    if new_score < best_score:
-                        best_score = new_score
-                        best_move = move
-
-                    beta = min(beta, best_score)
-
-                    if alpha >= beta:
-                        break
-
-                return best_move, best_score
-
         def get_best_move(self):
-            best_move = self.minimax(-math.inf, math.inf, 3, True)
+            #best_move = self.minimax(-math.inf, math.inf, 3, True)
+            best_move = training.current_path(action="next move")
             return best_move
             
     def find_best_move(self):
