@@ -32,35 +32,24 @@ def random_string(length):
 
 def init():
 
-    username = input("USERNAME: ")
-    password = input("PADDWORD: ")
+    username = "Bhargava"
+    password = "Chess"
 
     UI.valid_login(username, password)
     
     os.system('clear')
 
     global mode
-    mode = input("PVP or PVC: ").upper()
+    mode = "PVC"
 
     if mode not in ["PVP", "PVC"]:
         raise UI.InvalidInput("MODE PVP/PVC --> ENTERED: " + mode)
 
     else:
-
-        if mode == "PVP":
-           
-            game_code = input("GAME CODE: ")
-            if game_code.upper() == "NEW":
-                game_code = random_string(10)
-                print("GAME CODE: " + game_code + "\nTHIS IS THE GAME CODE")
-                cont = input("PRESS ENTER TO CONTINUE")
-                if cont == "":
-                    pass
-                else:
-                    cont = input("PRESS ENTER TO CONTINUE")
-
+        if mode == "PVP":         
+            print("INPUT --> MODE:PVP")
         else:
-            
+            print("INPUT --> MODE:PVC")
             LEVEL = int(input("LEVEL: "))
             if LEVEL not in range(1, 11):
                 raise UI.InvalidInput
@@ -83,6 +72,7 @@ def main():
     
     running = True
     winner = None
+    action = None
 
     move_played = False
     undo_made = (False, False)
@@ -110,18 +100,20 @@ def main():
 
         if undo_made[0]:
             x, y = move_log.c_x, move_log.c_y
-            w, h = SQ_SIZE * 2, move_log.txt_size + move_log.padding
-            pygame.draw.rect(display, (30, 30, 30), (x, y + h, w, h))
+            w, h = (ACT_WIDTH - WIDTH) * 2, move_log.txt_size + move_log.padding
+            pygame.draw.rect(display, (20, 20, 20), (x, y + h, w, h))
 
         if undo_made[0] and undo_made[1]:
             x, y = move_log.c_x, move_log.c_y
             w, h = SQ_SIZE * 2, move_log.txt_size + move_log.padding
-            pygame.draw.rect(display, (30, 30, 30), (x, y + h, w, h * 2))
+            pygame.draw.rect(display, (20, 20, 20), (x, y + h, w, h * 2))
 
         pygame.display.flip()
         clock.tick(FPS)
     
     while running:
+
+        sction = get_actions()
         
         for event in pygame.event.get():
             
@@ -158,9 +150,9 @@ def main():
                         player_clicks = []
                         square_selected = ()
 
-                if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo and winner == None and game_state.move_log:
+                if ((y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo and winner == None and game_state.move_log) or action == 'undo':
                     
-                    move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(30, 30, 30))
+                    move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(20, 20, 20))
                     game_state.undo_move(final=True)
                     move_log.erase_line()
 
@@ -172,7 +164,7 @@ def main():
 
                     if mode == "PVC" or (game_state.white_to_move and len(game_state.move_log) >= 2):
 
-                        move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(30, 30, 30))
+                        move_log.write_line(game_state.user_move_log[-1], next_line=False, color=(20, 20, 20))
                         game_state.undo_move(final=True)
                         move_log.erase_line()
 
@@ -182,19 +174,16 @@ def main():
                         undo_made = (True, True)
                         animate = False
 
-                if (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3) and (mode == "PVP" or (mode == "PVC" and game_state.white_to_move)) and winner == None:
-
-                    resign = "yes"
-
-                    if resign.upper() == "YES":
-                        
+                if ((y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3) and (mode == "PVP" or (mode == "PVC" and game_state.white_to_move)) and winner == None) or action == 'resign':
+                    
+                    if sure.upper() == "YES":
+                    
                         if game_state.white_to_move:
                             winner = "BLACK"
-
                         else:
                             winner = "WHITE"
 
-                        print("BLACK RESIGNED" if winner == "WHITE" else "WHITE RESIGNED")
+                    print("BLACK RESIGNED" if winner == "WHITE" else "WHITE RESIGNED")
                     
             if event.type == pygame.KEYDOWN:
                 
@@ -203,10 +192,10 @@ def main():
 
             x, y = pygame.mouse.get_pos()
 
-            if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > 2 * WIDTH // 3) and can_undo:
+            if (y in range( HEIGHT - SQ_SIZE, HEIGHT - SQ_SIZE // 2 ) and x > WIDTH) and can_undo:
                 draw_buttons(display, c1=pygame.Color('red'))
 
-            elif (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > 2 * WIDTH // 3):
+            elif (y in range( HEIGHT - SQ_SIZE // 2, HEIGHT ) and x > WIDTH):
                 draw_buttons(display, c2=pygame.Color('red')) if can_undo else draw_buttons(display, c1=pygame.Color('dark grey'), c2=pygame.Color('red'))
 
             else:
@@ -232,7 +221,7 @@ def main():
             if game_state.user_move_log and (not undo_made[1] and not undo_made[0]):
                 text = move_log.write_line(game_state.user_move_log[-1])
                 display.blit(text[0], text[1])
-                if move_log.line == 24:
+                if move_log.line == 20:
                     move_log.scroll()
             move_played = False
 
@@ -255,15 +244,15 @@ def main():
 
         if not game_state.white_to_move and mode == "PVC":
 
-            game_state.find_best_move()
-            move, score = game_state.ai.best_move
+            move, score = game_state.find_best_move()
 
             game_state.make_move(move)
             move_played = True
                     
             player_clicks = []
             square_selected = ()
-            
+
+         
 def exit():
     print("GOODBYE")
     pygame.quit()
@@ -274,20 +263,20 @@ def draw_buttons(screen, c1=BLACK, c2=BLACK):
 
     font = pygame.font.SysFont("freesansbold.ttf", SQ_SIZE // 2 - SQ_SIZE//10)
 
-    pygame.draw.rect(screen, c1, ( 2 * WIDTH // 3, HEIGHT - SQ_SIZE, WIDTH // 3, SQ_SIZE // 2 ))
+    pygame.draw.rect(screen, c1, ( WIDTH, HEIGHT - SQ_SIZE, WIDTH // 3, SQ_SIZE // 2 ))
     text_img = font.render("UNDO", False, WHITE)
-    screen.blit(text_img, (2 * WIDTH // 3 + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE + SQ_SIZE // 5))
+    screen.blit(text_img, (WIDTH + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE + SQ_SIZE // 5))
 
-    pygame.draw.rect(screen, c2, ( 2 * WIDTH // 3, HEIGHT - SQ_SIZE // 2, WIDTH // 3, SQ_SIZE // 2 ))
+    pygame.draw.rect(screen, c2, ( WIDTH, HEIGHT - SQ_SIZE // 2, WIDTH // 3, SQ_SIZE // 2 ))
     text_img = font.render("RESIGN", False, WHITE)
-    screen.blit(text_img, (2 * WIDTH // 3 + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE // 2 + SQ_SIZE // 5)) 
+    screen.blit(text_img, (WIDTH + SQ_SIZE // 1.1, HEIGHT - SQ_SIZE // 2 + SQ_SIZE // 5)) 
         
 def update_board(screen, game_state, square_selected=None, win=None):
 
     draw_board(screen, square_selected)
     draw_pieces(screen, game_state.board)
 
-    pygame.draw.rect(screen, WHITE, (0, HEIGHT - SQ_SIZE, 2 * WIDTH // 3, SQ_SIZE))
+    pygame.draw.rect(screen, WHITE, (0, HEIGHT - SQ_SIZE, WIDTH, SQ_SIZE))
 
     if win == None:
         text = ("WHITE" if game_state.white_to_move else "BLACK") + "'S TURN"
@@ -364,7 +353,16 @@ def animate_move(move, screen, board, clock):
 
         screen.blit(IMAGES[move.piece_moved], (pygame.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE)))
         pygame.display.flip()
-        clock.tick(100)      
+        clock.tick(100)
+
+def get_actions():
+    return None
+
+def get_stdout():
+    return sys.stdout
+
+def embed_link(display):
+    return display.embed()
 
 if __name__ == "__main__":
     init()
