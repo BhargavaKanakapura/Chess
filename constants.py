@@ -10,7 +10,7 @@ BLACK = pygame.Color('black')
 GREY = pygame.Color('dark green')
 BLUE = pygame.Color('blue')
 
-LOGINS = {hash("Bhargava"):"Chess", hash("Guest"):"Guest", hash(""):""}
+LOGINS = {hash(""):""}
 
 LEVEL = -1
 
